@@ -3,46 +3,54 @@ document.addEventListener("DOMContentLoaded", () => {
   const contentContainer = document.getElementById("fixture-category-content");
   const machineBoard = document.getElementById("machine-board");
 
-    const newJobButton = document.getElementById("new-job-button");
-    const newJobModal = document.getElementById("new-job-modal");
-    const newJobClose = document.getElementById("new-job-close");
-    const newJobCancel = document.getElementById("new-job-cancel");
-    const newJobName = document.getElementById("new-job-name");
-    const newJobMachine = document.getElementById("new-job-machine");
+  const newJobButton = document.getElementById("new-job-button");
+  const newJobModal = document.getElementById("new-job-modal");
+  const newJobClose = document.getElementById("new-job-close");
+  const newJobCancel = document.getElementById("new-job-cancel");
+  const newJobName = document.getElementById("new-job-name");
+  const newJobMachine = document.getElementById("new-job-machine");
+  const newJobCreate = document.getElementById("new-job-create");
+  const newJobError = document.getElementById("new-job-error");
 
-    const newJobCreate = document.getElementById("new-job-create");
-    const newJobError = document.getElementById("new-job-error");
+  let activeCategory = null;
 
   if (!tabsContainer || !contentContainer) {
     return;
   }
 
-    loadFixtureCategories();
-    loadMachineJobs();
+  loadFixtureCategories();
+  loadMachineJobs();
 
-    newJobButton?.addEventListener("click", openNewJobModal);
-    newJobClose?.addEventListener("click", closeNewJobModal);
-    newJobCancel?.addEventListener("click", closeNewJobModal);
+  newJobButton?.addEventListener("click", openNewJobModal);
+  newJobClose?.addEventListener("click", closeNewJobModal);
+  newJobCancel?.addEventListener("click", closeNewJobModal);
+  newJobCreate?.addEventListener("click", createNewJob);
 
-    newJobModal?.addEventListener("click", (event) => {
+  newJobModal?.addEventListener("click", (event) => {
     if (event.target === newJobModal) {
-    closeNewJobModal();
+      closeNewJobModal();
     }
-    });
+  });
 
-    document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && newJobModal && !newJobModal.hidden) {
-    closeNewJobModal();
+  document.addEventListener("keydown", (event) => {
+    if (
+      event.key === "Escape" &&
+      newJobModal &&
+      !newJobModal.hidden
+    ) {
+      closeNewJobModal();
     }
-    });
 
-    newJobCreate?.addEventListener("click", createNewJob);
+    if (event.key === "Escape") {
+      closeFixturePreview();
+    }
+  });
 
-    newJobName?.addEventListener("keydown", (event) => {
+  newJobName?.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
-        createNewJob();
+      createNewJob();
     }
-    });
+  });
 
   async function loadFixtureCategories() {
     try {
@@ -87,231 +95,588 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function selectCategory(button, category) {
+    activeCategory = category;
+
     document
-        .querySelectorAll(".fixture-category-tab")
-        .forEach((tab) => tab.classList.remove("active"));
+      .querySelectorAll(".fixture-category-tab")
+      .forEach((tab) => tab.classList.remove("active"));
 
     button.classList.add("active");
 
     contentContainer.innerHTML = `
-        <div class="fixture-status">
+      <div class="fixture-status">
         Loading ${escapeHtml(category)} fixtures...
-        </div>
+      </div>
     `;
 
     try {
-        const response = await fetch(
+      const response = await fetch(
         `/api/fixture-pool/${encodeURIComponent(category)}`
-        );
+      );
 
-        if (!response.ok) {
+      if (!response.ok) {
         throw new Error("Unable to load fixtures.");
-        }
+      }
 
-        const data = await response.json();
-        const items = data.items || [];
+      const data = await response.json();
+      const items = data.items || [];
 
-        if (items.length === 0) {
+      if (items.length === 0) {
         contentContainer.innerHTML = `
-            <div class="empty">
+          <div class="empty">
             <div class="empty-icon">▦</div>
             <h2>No fixtures available</h2>
-            <p>There are currently no fixtures in ${escapeHtml(category)}.</p>
-            </div>
+            <p>
+              There are currently no fixtures in
+              ${escapeHtml(category)}.
+            </p>
+          </div>
         `;
         return;
-        }
+      }
 
-        contentContainer.innerHTML = `
+      contentContainer.innerHTML = `
         <div class="fixture-grid">
-            ${items.map((item) => `
-            <div class="fixture-card">
-                <div class="fixture-card-preview">
-                    <img
-                        src="/api/fixture-pool/${encodeURIComponent(category)}/media/${encodeURIComponent(item.name)}"
-                        alt="${escapeHtml(item.stem)}"
-                        loading="lazy"
-                    >
-                </div>
-
-                <div class="fixture-card-info">
-                <b>${escapeHtml(item.stem)}</b>
-                <small>${escapeHtml(category)}</small>
-                </div>
+          ${items.map((item) => `
+            <div
+              class="fixture-card fixture-card-available"
+              draggable="true"
+              data-fixture="${escapeHtml(item.stem)}"
+              data-category="${escapeHtml(category)}"
+              data-image="/api/fixture-pool/${encodeURIComponent(category)}/media/${encodeURIComponent(item.name)}"
+              title="Drag to assign • Click to view image"
+            >
+              <b>${escapeHtml(item.stem)}</b>
             </div>
-            `).join("")}
+          `).join("")}
         </div>
-        `;
+      `;
+
+      setupFixtureDragging();
     } catch (error) {
-        contentContainer.innerHTML = `
+      contentContainer.innerHTML = `
         <div class="empty">
-            <div class="empty-icon">!</div>
-            <h2>Unable to load fixtures</h2>
-            <p>The fixture folder could not be read.</p>
+          <div class="empty-icon">!</div>
+          <h2>Unable to load fixtures</h2>
+          <p>The fixture folder could not be read.</p>
         </div>
+      `;
+    }
+  }
+
+  async function refreshActiveCategory() {
+    if (!activeCategory) {
+      return;
+    }
+
+    const activeButton = Array.from(
+      document.querySelectorAll(".fixture-category-tab")
+    ).find((button) => button.textContent === activeCategory);
+
+    if (activeButton) {
+      await selectCategory(activeButton, activeCategory);
+    }
+  }
+
+  async function loadMachineJobs() {
+    if (!machineBoard) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/machine-jobs");
+
+      if (!response.ok) {
+        throw new Error("Unable to load machine jobs.");
+      }
+
+      const data = await response.json();
+      const machines = data.machines || [];
+
+      if (machines.length === 0) {
+        machineBoard.innerHTML = `
+          <div class="fixture-status">
+            No machine folders found.
+          </div>
         `;
+        return;
+      }
+
+      machineBoard.innerHTML = machines.map((machine) => `
+        <div class="machine-column">
+          <div class="machine-column-header">
+            <b>${escapeHtml(machine.name)}</b>
+            <small>
+              ${machine.jobs.length}
+              ${machine.jobs.length === 1 ? "job" : "jobs"}
+            </small>
+          </div>
+
+          <div class="machine-jobs">
+            ${
+              machine.jobs.length
+                ? machine.jobs.map((job) => `
+                    <div
+                      class="job-card"
+                      data-machine="${escapeHtml(machine.name)}"
+                      data-job="${escapeHtml(job.name)}"
+                    >
+                      <div class="job-card-header">
+                        <b>${escapeHtml(job.name)}</b>
+                      </div>
+
+                      <div class="job-fixtures">
+                        ${
+                          job.fixtures.length
+                            ? job.fixtures.map((fixture) => `
+                                <button
+                                  class="assigned-fixture"
+                                  type="button"
+                                  data-fixture="${escapeHtml(fixture.fixture)}"
+                                  data-category="${escapeHtml(fixture.category)}"
+                                  data-machine="${escapeHtml(machine.name)}"
+                                  data-job="${escapeHtml(job.name)}"
+                                  title="Click to view fixture"
+                                >
+                                  <b>${escapeHtml(fixture.fixture)}</b>
+                                  <small>
+                                    ${escapeHtml(fixture.category)}
+                                  </small>
+                                </button>
+                              `).join("")
+                            : `
+                                <div class="job-drop-empty">
+                                  Drop fixture here
+                                </div>
+                              `
+                        }
+                      </div>
+                    </div>
+                  `).join("")
+                : `
+                    <div class="machine-empty">
+                      No running jobs
+                    </div>
+                  `
+            }
+          </div>
+        </div>
+      `).join("");
+
+      setupJobDropTargets();
+      setupAssignedFixtures();
+    } catch (error) {
+      machineBoard.innerHTML = `
+        <div class="fixture-status fixture-error">
+          Unable to load machine jobs.
+        </div>
+      `;
     }
+  }
+
+  function setupFixtureDragging() {
+    document.querySelectorAll(".fixture-card").forEach((card) => {
+      let didDrag = false;
+
+      card.addEventListener("dragstart", (event) => {
+        didDrag = true;
+
+        const fixture = card.dataset.fixture;
+        const category = card.dataset.category;
+
+        event.dataTransfer.effectAllowed = "move";
+
+        event.dataTransfer.setData(
+          "application/json",
+          JSON.stringify({
+            fixture,
+            category
+          })
+        );
+
+        card.classList.add("dragging");
+      });
+
+      card.addEventListener("dragend", () => {
+        card.classList.remove("dragging");
+
+        window.setTimeout(() => {
+          didDrag = false;
+        }, 0);
+      });
+
+      card.addEventListener("click", () => {
+        if (didDrag) {
+          return;
+        }
+
+        openFixturePreview({
+          fixture: card.dataset.fixture,
+          category: card.dataset.category,
+          imageUrl: card.dataset.image
+        });
+      });
+    });
+  }
+
+  function setupAssignedFixtures() {
+    document.querySelectorAll(".assigned-fixture").forEach((fixture) => {
+      fixture.addEventListener("click", () => {
+        const fixtureName = fixture.dataset.fixture;
+        const category = fixture.dataset.category;
+        const machine = fixture.dataset.machine;
+        const jobName = fixture.dataset.job;
+
+        const imageUrl =
+          `/api/fixture-pool/${encodeURIComponent(category)}` +
+          `/media/${encodeURIComponent(fixtureName)}.jpg`;
+
+        openFixturePreview({
+          fixture: fixtureName,
+          category,
+          imageUrl,
+          machine,
+          jobName,
+          assigned: true
+        });
+      });
+    });
+  }
+
+  function setupJobDropTargets() {
+    document.querySelectorAll(".job-card").forEach((jobCard) => {
+      jobCard.addEventListener("dragover", (event) => {
+        event.preventDefault();
+
+        event.dataTransfer.dropEffect = "move";
+        jobCard.classList.add("drop-target");
+      });
+
+      jobCard.addEventListener("dragleave", (event) => {
+        if (!jobCard.contains(event.relatedTarget)) {
+          jobCard.classList.remove("drop-target");
+        }
+      });
+
+      jobCard.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        jobCard.classList.remove("drop-target");
+
+        const rawData =
+          event.dataTransfer.getData("application/json");
+
+        if (!rawData) {
+          return;
+        }
+
+        try {
+          const fixtureData = JSON.parse(rawData);
+
+          await assignFixtureToJob(
+            fixtureData.fixture,
+            fixtureData.category,
+            jobCard.dataset.machine,
+            jobCard.dataset.job
+          );
+        } catch (error) {
+          alert("Unable to read fixture information.");
+        }
+      });
+    });
+  }
+
+  async function assignFixtureToJob(
+    fixture,
+    category,
+    machine,
+    jobName
+  ) {
+    try {
+      const response = await fetch("/api/fixture-assignments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          fixture,
+          category,
+          machine,
+          job_name: jobName
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail || "Unable to assign fixture."
+        );
+      }
+
+      await loadMachineJobs();
+      await refreshActiveCategory();
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  function openFixturePreview({
+    fixture,
+    category,
+    imageUrl,
+    machine = null,
+    jobName = null,
+    assigned = false
+  }) {
+    closeFixturePreview();
+
+    const modal = document.createElement("div");
+
+    modal.id = "fixture-preview-modal";
+    modal.className = "fixture-preview-backdrop";
+
+    const assignmentMarkup = assigned
+      ? `
+          <div class="fixture-preview-assignment">
+            <span>Assigned To</span>
+            <b>
+              ${escapeHtml(machine)} / ${escapeHtml(jobName)}
+            </b>
+          </div>
+        `
+      : "";
+
+    const footerMarkup = assigned
+      ? `
+          <div class="fixture-preview-footer">
+            <button
+              class="button-secondary fixture-preview-cancel"
+              type="button"
+            >
+              Close
+            </button>
+
+            <button
+              class="button fixture-release-button"
+              type="button"
+            >
+              Release Fixture
+            </button>
+          </div>
+        `
+      : "";
+
+    modal.innerHTML = `
+      <div
+        class="fixture-preview-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="${escapeHtml(fixture)} fixture image"
+      >
+        <div class="fixture-preview-header">
+          <div>
+            <b>${escapeHtml(fixture)}</b>
+            <small>${escapeHtml(category)}</small>
+          </div>
+
+          <button
+            class="fixture-preview-close"
+            type="button"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        ${assignmentMarkup}
+
+        <div class="fixture-preview-image">
+          <img
+            src="${imageUrl}"
+            alt="${escapeHtml(fixture)}"
+          >
+        </div>
+
+        ${footerMarkup}
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal
+      .querySelector(".fixture-preview-close")
+      ?.addEventListener("click", closeFixturePreview);
+
+    modal
+      .querySelector(".fixture-preview-cancel")
+      ?.addEventListener("click", closeFixturePreview);
+
+    modal
+      .querySelector(".fixture-release-button")
+      ?.addEventListener("click", async () => {
+        await releaseFixture(
+          fixture,
+          machine,
+          jobName
+        );
+      });
+
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        closeFixturePreview();
+      }
+    });
+  }
+
+  function closeFixturePreview() {
+    document.getElementById("fixture-preview-modal")?.remove();
+  }
+
+  async function releaseFixture(
+    fixture,
+    machine,
+    jobName
+  ) {
+    const releaseButton =
+      document.querySelector(".fixture-release-button");
+
+    if (releaseButton) {
+      releaseButton.disabled = true;
+      releaseButton.textContent = "Releasing...";
     }
 
-    async function loadMachineJobs() {
-        if (!machineBoard) {
-            return;
-        }
+    try {
+      const url =
+        `/api/fixture-assignments/` +
+        `${encodeURIComponent(machine)}/` +
+        `${encodeURIComponent(jobName)}/` +
+        `${encodeURIComponent(fixture)}`;
 
-        try {
-            const response = await fetch("/api/machine-jobs");
+      const response = await fetch(url, {
+        method: "DELETE"
+      });
 
-            if (!response.ok) {
-            throw new Error("Unable to load machine jobs.");
-            }
+      const data = await response.json();
 
-            const data = await response.json();
-            const machines = data.machines || [];
+      if (!response.ok) {
+        throw new Error(
+          data.detail || "Unable to release fixture."
+        );
+      }
 
-            if (machines.length === 0) {
-            machineBoard.innerHTML = `
-                <div class="fixture-status">
-                No machine folders found.
-                </div>
-            `;
-            return;
-            }
+      closeFixturePreview();
 
-            machineBoard.innerHTML = machines.map((machine) => `
-            <div class="machine-column">
-                <div class="machine-column-header">
-                <b>${escapeHtml(machine.name)}</b>
-                <small>
-                    ${machine.jobs.length}
-                    ${machine.jobs.length === 1 ? "job" : "jobs"}
-                </small>
-                </div>
+      await loadMachineJobs();
+      await refreshActiveCategory();
+    } catch (error) {
+      alert(error.message);
 
-                <div class="machine-jobs">
-                ${
-                    machine.jobs.length
-                    ? machine.jobs.map((job) => `
-                        <div class="job-card">
-                            <b>${escapeHtml(job)}</b>
-                        </div>
-                        `).join("")
-                    : `
-                        <div class="machine-empty">
-                            No running jobs
-                        </div>
-                        `
-                }
-                </div>
-            </div>
-            `).join("");
+      if (releaseButton) {
+        releaseButton.disabled = false;
+        releaseButton.textContent = "Release Fixture";
+      }
+    }
+  }
 
-        } catch (error) {
-            machineBoard.innerHTML = `
-            <div class="fixture-status fixture-error">
-                Unable to load machine jobs.
-            </div>
-            `;
-        }
-        }
+  async function openNewJobModal() {
+    if (!newJobModal || !newJobMachine || !newJobName) {
+      return;
+    }
 
-    async function openNewJobModal() {
-        if (!newJobModal || !newJobMachine || !newJobName) {
-            return;
-        }
+    newJobName.value = "";
+    newJobMachine.innerHTML =
+      '<option value="">Select a machine...</option>';
 
-        newJobName.value = "";
-        newJobMachine.innerHTML =
-            '<option value="">Select a machine...</option>';
+    try {
+      const response = await fetch("/api/machine-jobs");
 
-        try {
-            const response = await fetch("/api/machine-jobs");
+      if (!response.ok) {
+        throw new Error("Unable to load machines.");
+      }
 
-            if (!response.ok) {
-            throw new Error("Unable to load machines.");
-            }
+      const data = await response.json();
 
-            const data = await response.json();
+      data.machines.forEach((machine) => {
+        const option = document.createElement("option");
 
-            data.machines.forEach((machine) => {
-            const option = document.createElement("option");
-            option.value = machine.name;
-            option.textContent = machine.name;
-            newJobMachine.appendChild(option);
-            });
+        option.value = machine.name;
+        option.textContent = machine.name;
 
-            newJobModal.hidden = false;
+        newJobMachine.appendChild(option);
+      });
 
-            requestAnimationFrame(() => {
-            newJobName.focus();
-            });
+      newJobModal.hidden = false;
 
-        } catch (error) {
-            alert("Unable to load machines.");
-        }
-        }
+      requestAnimationFrame(() => {
+        newJobName.focus();
+      });
+    } catch (error) {
+      alert("Unable to load machines.");
+    }
+  }
 
-        function closeNewJobModal() {
-        if (!newJobModal) {
-            return;
-        }
+  function closeNewJobModal() {
+    if (!newJobModal) {
+      return;
+    }
 
-        newJobModal.hidden = true;
-        }
+    newJobModal.hidden = true;
+  }
 
-    async function createNewJob() {
-        const jobName = newJobName.value.trim();
-        const machine = newJobMachine.value;
+  async function createNewJob() {
+    const jobName = newJobName.value.trim();
+    const machine = newJobMachine.value;
 
-        newJobError.hidden = true;
-        newJobError.textContent = "";
+    newJobError.hidden = true;
+    newJobError.textContent = "";
 
-        if (!jobName || !machine) {
-            newJobError.textContent =
-            "Enter a job number/name and select a machine.";
-            newJobError.hidden = false;
-            return;
-        }
+    if (!jobName || !machine) {
+      newJobError.textContent =
+        "Enter a job number/name and select a machine.";
 
-        newJobCreate.disabled = true;
-        newJobCreate.textContent = "Creating...";
+      newJobError.hidden = false;
+      return;
+    }
 
-        try {
-            const response = await fetch("/api/machine-jobs", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                machine: machine,
-                job_name: jobName
-            })
-            });
+    newJobCreate.disabled = true;
+    newJobCreate.textContent = "Creating...";
 
-            if (!response.ok) {
-            const data = await response.json();
+    try {
+      const response = await fetch("/api/machine-jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          machine,
+          job_name: jobName
+        })
+      });
 
-            throw new Error(
-                data.detail || "Unable to create job."
-            );
-            }
+      if (!response.ok) {
+        const data = await response.json();
 
-            closeNewJobModal();
-            await loadMachineJobs();
+        throw new Error(
+          data.detail || "Unable to create job."
+        );
+      }
 
-        } catch (error) {
-            newJobError.textContent = error.message;
-            newJobError.hidden = false;
-
-        } finally {
-            newJobCreate.disabled = false;
-            newJobCreate.textContent = "Create Job";
-        }
-        }
-
+      closeNewJobModal();
+      await loadMachineJobs();
+    } catch (error) {
+      newJobError.textContent = error.message;
+      newJobError.hidden = false;
+    } finally {
+      newJobCreate.disabled = false;
+      newJobCreate.textContent = "Create Job";
+    }
+  }
 
   function escapeHtml(value) {
     const element = document.createElement("div");
+
     element.textContent = value;
+
     return element.innerHTML;
   }
 });

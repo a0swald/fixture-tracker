@@ -320,3 +320,291 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+
+.job-card {
+  margin-bottom: 8px;
+  padding: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.job-card-header {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.job-card-header b {
+  display: block;
+  font-size: 10px;
+  color: var(--text);
+}
+
+.job-fixtures {
+  min-height: 46px;
+  padding: 6px;
+}
+
+.job-drop-empty {
+  display: grid;
+  place-items: center;
+  min-height: 34px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.assigned-fixture {
+  padding: 7px 8px;
+  border-radius: 3px;
+  background: #eef6fb;
+  border: 1px solid #c8deec;
+}
+
+.assigned-fixture b {
+  display: block;
+  font-size: 9px;
+  color: var(--blue);
+}
+
+.assigned-fixture small {
+  display: block;
+  margin-top: 2px;
+  font-size: 7px;
+  color: var(--muted);
+}
+
+.fixture-card[draggable="true"] {
+  cursor: grab;
+}
+
+.fixture-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.fixture-card.dragging {
+  opacity: 0.45;
+}
+
+.job-card.drop-target {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(0, 99, 165, 0.12);
+}
+
+.job-card.drop-target .job-drop-empty {
+  border-color: var(--blue);
+  background: #eef6fb;
+  color: var(--blue);
+}
+
+/* Compact available fixture tiles */
+
+.fixture-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+}
+
+.fixture-card-available {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 76px;
+  height: 38px;
+  padding: 0 14px;
+
+  box-sizing: border-box;
+
+  background: #fff8d9;
+  border: 1px solid #eadb8a;
+  border-radius: 4px;
+
+  color: #594d13;
+  font-size: 10px;
+
+  cursor: grab;
+  user-select: none;
+
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease,
+    opacity 120ms ease;
+}
+
+.fixture-card-available:hover {
+  background: #fff3bd;
+  border-color: #dbc55b;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.fixture-card-available b {
+  font-size: 10px;
+}
+
+.fixture-card-available:active {
+  cursor: grabbing;
+}
+
+.fixture-card-available.dragging {
+  opacity: 0.45;
+}
+
+
+/* Fixture image preview */
+
+.fixture-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+
+  display: grid;
+  place-items: center;
+
+  padding: 24px;
+
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.fixture-preview-modal {
+  width: min(720px, 90vw);
+  overflow: hidden;
+
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+}
+
+.fixture-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 12px 14px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.fixture-preview-header b {
+  display: block;
+  font-size: 12px;
+}
+
+.fixture-preview-header small {
+  display: block;
+
+  margin-top: 2px;
+
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.fixture-preview-close {
+  border: 0;
+  background: transparent;
+
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.fixture-preview-image {
+  display: grid;
+  place-items: center;
+
+  min-height: 300px;
+  max-height: 70vh;
+
+  padding: 14px;
+
+  background: #f4f6f8;
+}
+
+.fixture-preview-image img {
+  display: block;
+
+  max-width: 100%;
+  max-height: calc(70vh - 28px);
+
+  object-fit: contain;
+
+  border-radius: 4px;
+}
+
+
+/* Drag/drop feedback */
+
+.job-card.drop-target {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(0, 99, 165, 0.12);
+}
+
+.job-card.drop-target .job-drop-empty {
+  border-color: var(--blue);
+  background: #eef6fb;
+  color: var(--blue);
+}
+
+.assigned-fixture {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assigned-fixture:hover {
+  border-color: var(--blue);
+  background: #e5f2fa;
+}
+
+.fixture-preview-assignment {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafb;
+}
+
+.fixture-preview-assignment span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.fixture-preview-assignment b {
+  display: block;
+  font-size: 10px;
+}
+
+.fixture-preview-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: #fafbfc;
+}
+
+.fixture-release-button {
+  background: #b42318;
+  border-color: #b42318;
+}
+
+.fixture-release-button:hover {
+  background: #912018;
+  border-color: #912018;
+}
+
+.fixture-release-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
