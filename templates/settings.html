@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Settings | Fixture Tracker{% endblock %}
+{% block topbar %}Settings{% endblock %}
+{% block content %}
+<div class="heading"><h1>Settings</h1><p>Configure Fixture Tracker and its Windows folder locations.</p></div>
+<div class="settings-grid">
+  <aside class="settings-menu"><small>SETTINGS</small><div class="settings-item">▣ <span>Folder Paths</span></div></aside>
+  <section class="panel">
+    <div class="panel-head"><b>Folder Paths</b><small>Set the Windows folders used for available fixtures and active machine jobs.</small></div>
+    <form id="pathsForm">
+      <div class="field">
+        <label for="fixturePool">Fixture Pool</label>
+        <p>Root folder containing fixture category folders such as 4-Axis, 5-Axis H, and 5-Axis V.</p>
+        <div class="input-wrap"><input id="fixturePool" placeholder="D:\Fixturing Organization\Fixture Pool"><span id="fixturePoolStatus"></span></div>
+        <em id="fixturePoolError"></em>
+      </div>
+      <hr>
+      <div class="field">
+        <label for="machineJobs">Machine Jobs</label>
+        <p>Root folder containing machine folders and their job folders.</p>
+        <div class="input-wrap"><input id="machineJobs" placeholder="D:\Fixturing Organization\Machines"><span id="machineJobsStatus"></span></div>
+        <em id="machineJobsError"></em>
+      </div>
+      <div class="actions"><span id="saveState"></span><button class="button" id="saveButton">Save Changes</button></div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/settings.js"></script>{% endblock %}

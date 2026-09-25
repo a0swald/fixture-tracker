@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Fixture Tracker{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">FT</div><div><b>Fixture Tracker</b><small>Fixturing Management</small></div></div>
+    <nav>
+      <a href="/" class="{% if page == 'home' %}active{% endif %}">⌂ <span>Fixture Board</span></a>
+      <a href="/settings" class="{% if page == 'settings' %}active{% endif %}">⚙ <span>Settings</span></a>
+    </nav>
+    <footer><b>FIXTURE TRACKER</b><span>Internal Manufacturing Tool</span></footer>
+  </aside>
+  <div class="main">
+    <header><span>{% block topbar %}Fixture Board{% endblock %}</span></header>
+    <main>{% block content %}{% endblock %}</main>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+{% block scripts %}{% endblock %}
+</body>
+</html>
