@@ -91,7 +91,11 @@ document.addEventListener("DOMContentLoaded", () => {
             ${items.map((item) => `
             <div class="fixture-card">
                 <div class="fixture-card-preview">
-                <span>▦</span>
+                    <img
+                        src="/api/fixture-pool/${encodeURIComponent(category)}/media/${encodeURIComponent(item.name)}"
+                        alt="${escapeHtml(item.stem)}"
+                        loading="lazy"
+                    >
                 </div>
 
                 <div class="fixture-card-info">

@@ -95,6 +95,13 @@
   font-size: 22px;
 }
 
+.fixture-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .fixture-card-info {
   padding: 9px 10px;
 }

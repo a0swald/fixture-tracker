@@ -1,8 +1,11 @@
 from pathlib import Path
 import json
+
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -133,7 +136,11 @@ def get_fixture_pool_items(category: str):
                     "extension": item.suffix.lower()
                 }
                 for item in category_path.iterdir()
-                if item.is_file() and item.stem.upper().startswith("F_")
+                if (
+                    item.is_file()
+                    and item.suffix.lower() in {".jpg", ".jpeg"}
+                    and item.stem.upper().startswith("F_")
+                )
             ],
             key=lambda item: item["name"].lower()
         )
@@ -147,3 +154,39 @@ def get_fixture_pool_items(category: str):
         "category": category,
         "items": items
     }
+
+@app.get("/api/fixture-pool/{category}/media/{filename}")
+def get_fixture_media(category: str, filename: str):
+    config = load_config()
+    fixture_pool_path = config.get("fixture_pool", "").strip()
+
+    if not fixture_pool_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Fixture Pool path is not configured."
+        )
+
+    fixture_pool = Path(fixture_pool_path)
+    media_path = fixture_pool / category / filename
+
+    try:
+        media_path.resolve().relative_to(fixture_pool.resolve())
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid fixture media path."
+        )
+
+    if not media_path.exists() or not media_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Fixture media was not found."
+        )
+
+    if not media_path.stem.upper().startswith("F_"):
+        raise HTTPException(
+            status_code=404,
+            detail="Fixture media was not found."
+        )
+
+    return FileResponse(media_path)
