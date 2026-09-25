@@ -140,20 +140,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
       contentContainer.innerHTML = `
         <div class="fixture-grid">
-          ${items.map((item) => `
-            <div
-              class="fixture-card fixture-card-available"
-              draggable="true"
-              data-fixture="${escapeHtml(item.stem)}"
-              data-category="${escapeHtml(category)}"
-              data-image="/api/fixture-pool/${encodeURIComponent(category)}/media/${encodeURIComponent(item.name)}"
-              title="Drag to assign • Click to view image"
-            >
-              <b>${escapeHtml(item.stem)}</b>
-            </div>
-          `).join("")}
+            ${items.map((item) => {
+            const imageUrl =
+                `/api/fixture-pool/${encodeURIComponent(category)}` +
+                `/media/${encodeURIComponent(item.name)}`;
+
+            return `
+                <div
+                class="fixture-card fixture-card-available"
+                draggable="true"
+                data-fixture="${escapeHtml(item.stem)}"
+                data-category="${escapeHtml(category)}"
+                data-image="${imageUrl}"
+                title="Drag to assign • Click to view image"
+                >
+                <img
+                    class="fixture-card-image"
+                    src="${imageUrl}"
+                    alt="${escapeHtml(item.stem)}"
+                    draggable="false"
+                >
+
+                <div class="fixture-card-info">
+                    <b>${escapeHtml(item.stem)}</b>
+                    <small>${escapeHtml(category)}</small>
+                </div>
+                </div>
+            `;
+            }).join("")}
         </div>
-      `;
+        `;
 
       setupFixtureDragging();
     } catch (error) {

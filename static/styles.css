@@ -538,3 +538,57 @@
   opacity: 0.6;
   cursor: wait;
 }
+
+/* Available Fixture Pool cards */
+
+.fixture-grid .fixture-card.fixture-card-available {
+  display: flex;
+  flex-direction: column;
+  width: 148px;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  cursor: grab;
+}
+
+.fixture-grid .fixture-card.fixture-card-available:active {
+  cursor: grabbing;
+}
+
+.fixture-grid .fixture-card.fixture-card-available .fixture-card-image {
+  display: block;
+  width: 100%;
+  height: 110px;
+  min-height: 110px;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.fixture-grid .fixture-card.fixture-card-available .fixture-card-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  gap: 2px;
+  padding: 9px 10px 10px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.fixture-grid .fixture-card.fixture-card-available .fixture-card-info b {
+  display: block;
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.fixture-grid .fixture-card.fixture-card-available .fixture-card-info small {
+  display: block;
+  font-size: 10px;
+  line-height: 13px;
+  color: #64748b;
+}
