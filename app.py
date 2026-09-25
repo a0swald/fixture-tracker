@@ -523,6 +523,81 @@ def create_machine_job(job: NewJob):
         "job_name": job_name,
     }
 
+@app.delete("/api/machine-jobs/{machine}/{job_name}")
+def delete_machine_job(
+    machine: str,
+    job_name: str,
+):
+    config = load_config()
+
+    machine_jobs_value = config.get(
+        "machine_jobs",
+        "",
+    ).strip()
+
+    if not machine_jobs_value:
+        raise HTTPException(
+            status_code=400,
+            detail="Machine Jobs path is not configured.",
+        )
+
+    machine_jobs = Path(machine_jobs_value)
+    machine_path = machine_jobs / machine
+    job_path = machine_path / job_name
+
+    try:
+        machine_path.resolve().relative_to(
+            machine_jobs.resolve()
+        )
+
+        job_path.resolve().relative_to(
+            machine_path.resolve()
+        )
+
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid machine or job.",
+        )
+
+    if not machine_path.exists() or not machine_path.is_dir():
+        raise HTTPException(
+            status_code=404,
+            detail="Machine was not found.",
+        )
+
+    if not job_path.exists() or not job_path.is_dir():
+        raise HTTPException(
+            status_code=404,
+            detail="Job was not found.",
+        )
+
+    assigned_fixtures = list(job_path.glob("*.fixture"))
+
+    if assigned_fixtures:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Return all fixtures to the Fixture Pool "
+                "before deleting this job."
+            ),
+        )
+
+    try:
+        job_path.rmdir()
+
+    except OSError:
+        raise HTTPException(
+            status_code=500,
+            detail="Job folder could not be deleted.",
+        )
+
+    return {
+        "machine": machine,
+        "job_name": job_name,
+        "deleted": True,
+    }
+
 
 @app.post("/api/fixture-assignments")
 def assign_fixture(assignment: FixtureAssignment):

@@ -240,9 +240,20 @@ document.addEventListener("DOMContentLoaded", () => {
                       data-machine="${escapeHtml(machine.name)}"
                       data-job="${escapeHtml(job.name)}"
                     >
-                      <div class="job-card-header">
-                        <b>${escapeHtml(job.name)}</b>
-                      </div>
+                        <div class="job-card-header">
+                            <b>${escapeHtml(job.name)}</b>
+
+                            <button
+                                class="job-delete-button"
+                                type="button"
+                                data-machine="${escapeHtml(machine.name)}"
+                                data-job="${escapeHtml(job.name)}"
+                                title="Delete job"
+                                aria-label="Delete ${escapeHtml(job.name)}"
+                            >
+                                ×
+                            </button>
+                        </div>
 
                       <div class="job-fixtures">
                         ${
@@ -286,6 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       setupJobDropTargets();
       setupAssignedFixtures();
+      setupJobDeleteButtons();
     } catch (error) {
       machineBoard.innerHTML = `
         <div class="fixture-status fixture-error">
@@ -718,6 +730,52 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   }
+
+  function setupJobDeleteButtons() {
+    document.querySelectorAll(".job-delete-button").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+        event.stopPropagation();
+
+        const machine = button.dataset.machine;
+        const jobName = button.dataset.job;
+
+        const confirmed = window.confirm(
+            `Delete "${jobName}" from ${machine}?`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        await deleteJob(machine, jobName);
+        });
+    });
+    }
+
+    async function deleteJob(machine, jobName) {
+    try {
+        const url =
+        `/api/machine-jobs/` +
+        `${encodeURIComponent(machine)}/` +
+        `${encodeURIComponent(jobName)}`;
+
+        const response = await fetch(url, {
+        method: "DELETE"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+        throw new Error(
+            data.detail || "Unable to delete job."
+        );
+        }
+
+        await loadMachineJobs();
+    } catch (error) {
+        alert(error.message);
+    }
+    }
 
   async function openNewJobModal() {
     if (!newJobModal || !newJobMachine || !newJobName) {

@@ -592,3 +592,31 @@
   line-height: 13px;
   color: #64748b;
 }
+
+.job-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.job-delete-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.job-delete-button:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
