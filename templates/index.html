@@ -28,6 +28,74 @@
     </div>
   </div>
 </section>
+
+<section class="panel machine-board-panel">
+  <div class="panel-head machine-board-head">
+    <div>
+      <b>Running Jobs</b>
+      <small>Fixture assignments organized by machine and job.</small>
+    </div>
+
+    <button id="new-job-button" class="button" type="button">
+      + New Job
+    </button>
+  </div>
+
+  <div id="machine-board" class="machine-board">
+    <div class="fixture-status">Loading machines...</div>
+  </div>
+</section>
+
+<div id="new-job-modal" class="modal-backdrop" hidden>
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h2>New Job</h2>
+        <p>Create a job and assign it to a machine or group.</p>
+      </div>
+
+      <button
+        id="new-job-close"
+        class="modal-close"
+        type="button"
+        aria-label="Close"
+      >
+        ×
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <label class="form-field">
+        <span>Job Number / Name</span>
+        <input
+          id="new-job-name"
+          type="text"
+          placeholder="Enter job number or name"
+          autocomplete="off"
+        >
+      </label>
+
+      <label class="form-field">
+        <span>Machine / Group</span>
+        <select id="new-job-machine">
+          <option value="">Select a machine...</option>
+        </select>
+      </label>
+
+      <div id="new-job-error" class="form-error" hidden></div>
+    </div>
+
+    <div class="modal-footer">
+      <button id="new-job-cancel" class="button-secondary" type="button">
+        Cancel
+      </button>
+
+      <button id="new-job-create" class="button" type="button">
+        Create Job
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

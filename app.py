@@ -19,6 +19,10 @@ class FolderPaths(BaseModel):
     fixture_pool: str = ""
     machine_jobs: str = ""
 
+class NewJob(BaseModel):
+    machine: str
+    job_name: str
+
 def load_config():
     default = {"fixture_pool": "", "machine_jobs": ""}
     if not CONFIG_FILE.exists():
@@ -190,3 +194,117 @@ def get_fixture_media(category: str, filename: str):
         )
 
     return FileResponse(media_path)
+
+@app.get("/api/machine-jobs")
+def get_machine_jobs():
+    config = load_config()
+    machine_jobs_path = config.get("machine_jobs", "").strip()
+
+    if not machine_jobs_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Machine Jobs path is not configured."
+        )
+
+    machine_jobs = Path(machine_jobs_path)
+
+    if not machine_jobs.exists() or not machine_jobs.is_dir():
+        raise HTTPException(
+            status_code=400,
+            detail="Machine Jobs path is invalid."
+        )
+
+    try:
+        machines = []
+
+        for machine in machine_jobs.iterdir():
+            if not machine.is_dir():
+                continue
+
+            jobs = sorted(
+                [
+                    job.name
+                    for job in machine.iterdir()
+                    if job.is_dir()
+                ],
+                key=str.lower
+            )
+
+            machines.append({
+                "name": machine.name,
+                "jobs": jobs
+            })
+
+        machines.sort(key=lambda machine: machine["name"].lower())
+
+    except OSError:
+        raise HTTPException(
+            status_code=500,
+            detail="Machine Jobs folder could not be read."
+        )
+
+    return {"machines": machines}
+
+@app.post("/api/machine-jobs")
+def create_machine_job(job: NewJob):
+    config = load_config()
+    machine_jobs_path = config.get("machine_jobs", "").strip()
+
+    if not machine_jobs_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Machine Jobs path is not configured."
+        )
+
+    machine_jobs = Path(machine_jobs_path)
+    machine_path = machine_jobs / job.machine
+    job_name = job.job_name.strip()
+
+    if not job_name:
+        raise HTTPException(
+            status_code=400,
+            detail="Job name is required."
+        )
+
+    try:
+        machine_path.resolve().relative_to(machine_jobs.resolve())
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid machine."
+        )
+
+    if not machine_path.exists() or not machine_path.is_dir():
+        raise HTTPException(
+            status_code=404,
+            detail="Machine was not found."
+        )
+
+    job_path = machine_path / job_name
+
+    try:
+        job_path.resolve().relative_to(machine_path.resolve())
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid job name."
+        )
+
+    if job_path.exists():
+        raise HTTPException(
+            status_code=409,
+            detail="A job with this name already exists on this machine."
+        )
+
+    try:
+        job_path.mkdir()
+    except OSError:
+        raise HTTPException(
+            status_code=500,
+            detail="Job folder could not be created."
+        )
+
+    return {
+        "machine": job.machine,
+        "job_name": job_name
+    }

@@ -1,12 +1,48 @@
 document.addEventListener("DOMContentLoaded", () => {
   const tabsContainer = document.getElementById("fixture-category-tabs");
   const contentContainer = document.getElementById("fixture-category-content");
+  const machineBoard = document.getElementById("machine-board");
+
+    const newJobButton = document.getElementById("new-job-button");
+    const newJobModal = document.getElementById("new-job-modal");
+    const newJobClose = document.getElementById("new-job-close");
+    const newJobCancel = document.getElementById("new-job-cancel");
+    const newJobName = document.getElementById("new-job-name");
+    const newJobMachine = document.getElementById("new-job-machine");
+
+    const newJobCreate = document.getElementById("new-job-create");
+    const newJobError = document.getElementById("new-job-error");
 
   if (!tabsContainer || !contentContainer) {
     return;
   }
 
-  loadFixtureCategories();
+    loadFixtureCategories();
+    loadMachineJobs();
+
+    newJobButton?.addEventListener("click", openNewJobModal);
+    newJobClose?.addEventListener("click", closeNewJobModal);
+    newJobCancel?.addEventListener("click", closeNewJobModal);
+
+    newJobModal?.addEventListener("click", (event) => {
+    if (event.target === newJobModal) {
+    closeNewJobModal();
+    }
+    });
+
+    document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && newJobModal && !newJobModal.hidden) {
+    closeNewJobModal();
+    }
+    });
+
+    newJobCreate?.addEventListener("click", createNewJob);
+
+    newJobName?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+        createNewJob();
+    }
+    });
 
   async function loadFixtureCategories() {
     try {
@@ -116,6 +152,162 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     }
     }
+
+    async function loadMachineJobs() {
+        if (!machineBoard) {
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/machine-jobs");
+
+            if (!response.ok) {
+            throw new Error("Unable to load machine jobs.");
+            }
+
+            const data = await response.json();
+            const machines = data.machines || [];
+
+            if (machines.length === 0) {
+            machineBoard.innerHTML = `
+                <div class="fixture-status">
+                No machine folders found.
+                </div>
+            `;
+            return;
+            }
+
+            machineBoard.innerHTML = machines.map((machine) => `
+            <div class="machine-column">
+                <div class="machine-column-header">
+                <b>${escapeHtml(machine.name)}</b>
+                <small>
+                    ${machine.jobs.length}
+                    ${machine.jobs.length === 1 ? "job" : "jobs"}
+                </small>
+                </div>
+
+                <div class="machine-jobs">
+                ${
+                    machine.jobs.length
+                    ? machine.jobs.map((job) => `
+                        <div class="job-card">
+                            <b>${escapeHtml(job)}</b>
+                        </div>
+                        `).join("")
+                    : `
+                        <div class="machine-empty">
+                            No running jobs
+                        </div>
+                        `
+                }
+                </div>
+            </div>
+            `).join("");
+
+        } catch (error) {
+            machineBoard.innerHTML = `
+            <div class="fixture-status fixture-error">
+                Unable to load machine jobs.
+            </div>
+            `;
+        }
+        }
+
+    async function openNewJobModal() {
+        if (!newJobModal || !newJobMachine || !newJobName) {
+            return;
+        }
+
+        newJobName.value = "";
+        newJobMachine.innerHTML =
+            '<option value="">Select a machine...</option>';
+
+        try {
+            const response = await fetch("/api/machine-jobs");
+
+            if (!response.ok) {
+            throw new Error("Unable to load machines.");
+            }
+
+            const data = await response.json();
+
+            data.machines.forEach((machine) => {
+            const option = document.createElement("option");
+            option.value = machine.name;
+            option.textContent = machine.name;
+            newJobMachine.appendChild(option);
+            });
+
+            newJobModal.hidden = false;
+
+            requestAnimationFrame(() => {
+            newJobName.focus();
+            });
+
+        } catch (error) {
+            alert("Unable to load machines.");
+        }
+        }
+
+        function closeNewJobModal() {
+        if (!newJobModal) {
+            return;
+        }
+
+        newJobModal.hidden = true;
+        }
+
+    async function createNewJob() {
+        const jobName = newJobName.value.trim();
+        const machine = newJobMachine.value;
+
+        newJobError.hidden = true;
+        newJobError.textContent = "";
+
+        if (!jobName || !machine) {
+            newJobError.textContent =
+            "Enter a job number/name and select a machine.";
+            newJobError.hidden = false;
+            return;
+        }
+
+        newJobCreate.disabled = true;
+        newJobCreate.textContent = "Creating...";
+
+        try {
+            const response = await fetch("/api/machine-jobs", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                machine: machine,
+                job_name: jobName
+            })
+            });
+
+            if (!response.ok) {
+            const data = await response.json();
+
+            throw new Error(
+                data.detail || "Unable to create job."
+            );
+            }
+
+            closeNewJobModal();
+            await loadMachineJobs();
+
+        } catch (error) {
+            newJobError.textContent = error.message;
+            newJobError.hidden = false;
+
+        } finally {
+            newJobCreate.disabled = false;
+            newJobCreate.textContent = "Create Job";
+        }
+        }
+
 
   function escapeHtml(value) {
     const element = document.createElement("div");
