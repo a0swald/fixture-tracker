@@ -57,3 +57,93 @@ def update_folder_paths(paths: FolderPaths):
         raise HTTPException(status_code=400, detail={"message": "One or more folder paths are invalid.", "fields": errors})
     save_config(config)
     return config
+
+@app.get("/api/fixture-pool/categories")
+def get_fixture_pool_categories():
+    config = load_config()
+    fixture_pool_path = config.get("fixture_pool", "").strip()
+
+    if not fixture_pool_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Fixture Pool path is not configured."
+        )
+
+    fixture_pool = Path(fixture_pool_path)
+
+    if not fixture_pool.exists() or not fixture_pool.is_dir():
+        raise HTTPException(
+            status_code=400,
+            detail="Fixture Pool path is invalid."
+        )
+
+    try:
+        categories = sorted(
+            [
+                item.name
+                for item in fixture_pool.iterdir()
+                if item.is_dir()
+            ],
+            key=str.lower
+        )
+    except OSError:
+        raise HTTPException(
+            status_code=500,
+            detail="Fixture Pool folder could not be read."
+        )
+
+    return {"categories": categories}
+
+
+@app.get("/api/fixture-pool/{category}")
+def get_fixture_pool_items(category: str):
+    config = load_config()
+    fixture_pool_path = config.get("fixture_pool", "").strip()
+
+    if not fixture_pool_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Fixture Pool path is not configured."
+        )
+
+    fixture_pool = Path(fixture_pool_path)
+    category_path = fixture_pool / category
+
+    # Prevent requests from escaping the configured Fixture Pool.
+    try:
+        category_path.resolve().relative_to(fixture_pool.resolve())
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid fixture category."
+        )
+
+    if not category_path.exists() or not category_path.is_dir():
+        raise HTTPException(
+            status_code=404,
+            detail="Fixture category was not found."
+        )
+
+    try:
+        items = sorted(
+            [
+                {
+                    "name": item.name,
+                    "stem": item.stem,
+                    "extension": item.suffix.lower()
+                }
+                for item in category_path.iterdir()
+                if item.is_file() and item.stem.upper().startswith("F_")
+            ],
+            key=lambda item: item["name"].lower()
+        )
+    except OSError:
+        raise HTTPException(
+            status_code=500,
+            detail="Fixture category could not be read."
+        )
+
+    return {
+        "category": category,
+        "items": items
+    }

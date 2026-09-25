@@ -1,9 +1,35 @@
 {% extends "base.html" %}
+
 {% block title %}Fixture Board | Fixture Tracker{% endblock %}
+
 {% block content %}
-<div class="heading"><h1>Fixture Board</h1><p>Track available fixtures and organize fixture assignments by machine and job.</p></div>
-<section class="panel">
-  <div class="panel-head"><b>Fixture Overview</b><small>The visual fixture board will live here.</small></div>
-  <div class="empty"><div class="empty-icon">▦</div><h2>Fixture board coming next</h2><p>Configure the Fixture Pool and Machine Jobs folder paths first.</p><a class="button" href="/settings">Open Settings</a></div>
+<div class="heading">
+  <h1>Fixture Board</h1>
+  <p>Track available fixtures and organize fixture assignments by machine and job.</p>
+</div>
+
+<section class="panel fixture-pool-panel">
+  <div class="panel-head">
+    <b>Fixture Pool</b>
+    <small>Available fixtures organized by fixture type.</small>
+  </div>
+
+  <div class="fixture-pool">
+    <div id="fixture-category-tabs" class="fixture-category-tabs">
+      <span class="fixture-loading">Loading fixture categories...</span>
+    </div>
+
+    <div id="fixture-category-content" class="fixture-category-content">
+      <div class="empty">
+        <div class="empty-icon">▦</div>
+        <h2>Select a fixture category</h2>
+        <p>Choose a category above to view its available fixtures.</p>
+      </div>
+    </div>
+  </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='app.js') }}"></script>
 {% endblock %}
