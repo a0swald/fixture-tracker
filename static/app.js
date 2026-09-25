@@ -12,7 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const newJobCreate = document.getElementById("new-job-create");
   const newJobError = document.getElementById("new-job-error");
 
-  let activeCategory = null;
+    let activeCategory = null;
+    let activeDrag = null;
 
   if (!tabsContainer || !contentContainer) {
     return;
@@ -20,6 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadFixtureCategories();
   loadMachineJobs();
+
+  setupFixturePoolDropTarget();
 
   newJobButton?.addEventListener("click", openNewJobModal);
   newJobClose?.addEventListener("click", closeNewJobModal);
@@ -229,20 +232,22 @@ document.addEventListener("DOMContentLoaded", () => {
                         ${
                           job.fixtures.length
                             ? job.fixtures.map((fixture) => `
-                                <button
-                                  class="assigned-fixture"
-                                  type="button"
-                                  data-fixture="${escapeHtml(fixture.fixture)}"
-                                  data-category="${escapeHtml(fixture.category)}"
-                                  data-machine="${escapeHtml(machine.name)}"
-                                  data-job="${escapeHtml(job.name)}"
-                                  title="Click to view fixture"
+                                <div
+                                class="assigned-fixture"
+                                draggable="true"
+                                role="button"
+                                tabindex="0"
+                                data-fixture="${escapeHtml(fixture.fixture)}"
+                                data-category="${escapeHtml(fixture.category)}"
+                                data-machine="${escapeHtml(machine.name)}"
+                                data-job="${escapeHtml(job.name)}"
+                                title="Click to view • Drag to Fixture Pool to return"
                                 >
-                                  <b>${escapeHtml(fixture.fixture)}</b>
-                                  <small>
-                                    ${escapeHtml(fixture.category)}
-                                  </small>
-                                </button>
+                                    <b>${escapeHtml(fixture.fixture)}</b>
+                                    <small>
+                                        ${escapeHtml(fixture.category)}
+                                    </small>
+                                </div>
                               `).join("")
                             : `
                                 <div class="job-drop-empty">
@@ -276,114 +281,230 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setupFixtureDragging() {
     document.querySelectorAll(".fixture-card").forEach((card) => {
-      let didDrag = false;
+        let didDrag = false;
 
-      card.addEventListener("dragstart", (event) => {
+        card.addEventListener("dragstart", (event) => {
         didDrag = true;
 
         const fixture = card.dataset.fixture;
         const category = card.dataset.category;
 
+        activeDrag = {
+            source: "fixture-pool",
+            fixture,
+            category
+        };
+
         event.dataTransfer.effectAllowed = "move";
 
         event.dataTransfer.setData(
-          "application/json",
-          JSON.stringify({
-            fixture,
-            category
-          })
+            "application/json",
+            JSON.stringify(activeDrag)
         );
 
         card.classList.add("dragging");
-      });
+        });
 
-      card.addEventListener("dragend", () => {
+        card.addEventListener("dragend", () => {
         card.classList.remove("dragging");
 
-        window.setTimeout(() => {
-          didDrag = false;
-        }, 0);
-      });
+        document
+            .querySelectorAll(".job-card.drop-target")
+            .forEach((jobCard) => {
+            jobCard.classList.remove("drop-target");
+            });
 
-      card.addEventListener("click", () => {
+        activeDrag = null;
+
+        window.setTimeout(() => {
+            didDrag = false;
+        }, 0);
+        });
+
+        card.addEventListener("click", () => {
         if (didDrag) {
-          return;
+            return;
         }
 
         openFixturePreview({
-          fixture: card.dataset.fixture,
-          category: card.dataset.category,
-          imageUrl: card.dataset.image
+            fixture: card.dataset.fixture,
+            category: card.dataset.category,
+            imageUrl: card.dataset.image
         });
-      });
+        });
     });
-  }
+    }
 
   function setupAssignedFixtures() {
     document.querySelectorAll(".assigned-fixture").forEach((fixture) => {
-      fixture.addEventListener("click", () => {
+        let didDrag = false;
+
+        fixture.addEventListener("dragstart", (event) => {
+        didDrag = true;
+
+        activeDrag = {
+            source: "assigned",
+            fixture: fixture.dataset.fixture,
+            category: fixture.dataset.category,
+            machine: fixture.dataset.machine,
+            jobName: fixture.dataset.job
+        };
+
+        event.stopPropagation();
+        event.dataTransfer.effectAllowed = "move";
+
+        event.dataTransfer.setData(
+            "application/json",
+            JSON.stringify(activeDrag)
+        );
+
+        fixture.classList.add("dragging");
+        });
+
+        fixture.addEventListener("dragend", () => {
+        fixture.classList.remove("dragging");
+
+        clearFixturePoolDropState();
+
+        activeDrag = null;
+
+        window.setTimeout(() => {
+            didDrag = false;
+        }, 0);
+        });
+
+        fixture.addEventListener("click", () => {
+        if (didDrag) {
+            return;
+        }
+
         const fixtureName = fixture.dataset.fixture;
         const category = fixture.dataset.category;
         const machine = fixture.dataset.machine;
         const jobName = fixture.dataset.job;
 
         const imageUrl =
-          `/api/fixture-pool/${encodeURIComponent(category)}` +
-          `/media/${encodeURIComponent(fixtureName)}.jpg`;
+            `/api/fixture-pool/${encodeURIComponent(category)}` +
+            `/media/${encodeURIComponent(fixtureName)}.jpg`;
 
         openFixturePreview({
-          fixture: fixtureName,
-          category,
-          imageUrl,
-          machine,
-          jobName,
-          assigned: true
+            fixture: fixtureName,
+            category,
+            imageUrl,
+            machine,
+            jobName,
+            assigned: true
         });
-      });
+        });
     });
+    }
+
+  function setupFixturePoolDropTarget() {
+    const fixturePool = contentContainer.closest(".fixture-pool");
+
+    if (!fixturePool) {
+        return;
+    }
+
+    fixturePool.addEventListener("dragover", (event) => {
+        if (!activeDrag || activeDrag.source !== "assigned") {
+        return;
+        }
+
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+
+        fixturePool.classList.add("fixture-pool-drop-target");
+    });
+
+    fixturePool.addEventListener("dragleave", (event) => {
+        if (!fixturePool.contains(event.relatedTarget)) {
+        clearFixturePoolDropState();
+        }
+    });
+
+    fixturePool.addEventListener("drop", async (event) => {
+        if (!activeDrag || activeDrag.source !== "assigned") {
+        return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const fixtureToReturn = { ...activeDrag };
+
+        clearFixturePoolDropState();
+
+        await releaseFixture(
+        fixtureToReturn.fixture,
+        fixtureToReturn.machine,
+        fixtureToReturn.jobName,
+        false
+        );
+    });
+    }
+
+  function clearFixturePoolDropState() {
+    const fixturePool = contentContainer.closest(".fixture-pool");
+
+    fixturePool?.classList.remove("fixture-pool-drop-target");
   }
+
+  function getDragData(event) {
+    const rawData =
+        event.dataTransfer.getData("application/json");
+
+    if (!rawData) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(rawData);
+    } catch {
+        return null;
+    }
+    }
 
   function setupJobDropTargets() {
     document.querySelectorAll(".job-card").forEach((jobCard) => {
-      jobCard.addEventListener("dragover", (event) => {
-        event.preventDefault();
-
-        event.dataTransfer.dropEffect = "move";
-        jobCard.classList.add("drop-target");
-      });
-
-      jobCard.addEventListener("dragleave", (event) => {
-        if (!jobCard.contains(event.relatedTarget)) {
-          jobCard.classList.remove("drop-target");
+        jobCard.addEventListener("dragover", (event) => {
+        if (!activeDrag || activeDrag.source !== "fixture-pool") {
+            return;
         }
-      });
 
-      jobCard.addEventListener("drop", async (event) => {
         event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+
+        jobCard.classList.add("drop-target");
+        });
+
+        jobCard.addEventListener("dragleave", (event) => {
+        if (!jobCard.contains(event.relatedTarget)) {
+            jobCard.classList.remove("drop-target");
+        }
+        });
+
+        jobCard.addEventListener("drop", async (event) => {
+        if (!activeDrag || activeDrag.source !== "fixture-pool") {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const fixtureToAssign = { ...activeDrag };
+
         jobCard.classList.remove("drop-target");
 
-        const rawData =
-          event.dataTransfer.getData("application/json");
-
-        if (!rawData) {
-          return;
-        }
-
-        try {
-          const fixtureData = JSON.parse(rawData);
-
-          await assignFixtureToJob(
-            fixtureData.fixture,
-            fixtureData.category,
+        await assignFixtureToJob(
+            fixtureToAssign.fixture,
+            fixtureToAssign.category,
             jobCard.dataset.machine,
             jobCard.dataset.job
-          );
-        } catch (error) {
-          alert("Unable to read fixture information.");
-        }
-      });
+        );
+        });
     });
-  }
+    }
 
   async function assignFixtureToJob(
     fixture,
@@ -460,7 +581,7 @@ document.addEventListener("DOMContentLoaded", () => {
               class="button fixture-release-button"
               type="button"
             >
-              Release Fixture
+              Return to Fixture Pool
             </button>
           </div>
         `
@@ -517,7 +638,8 @@ document.addEventListener("DOMContentLoaded", () => {
         await releaseFixture(
           fixture,
           machine,
-          jobName
+          jobName,
+          true
         );
       });
 
@@ -535,14 +657,15 @@ document.addEventListener("DOMContentLoaded", () => {
   async function releaseFixture(
     fixture,
     machine,
-    jobName
+    jobName,
+    fromPreview = false
   ) {
     const releaseButton =
       document.querySelector(".fixture-release-button");
 
-    if (releaseButton) {
+    if (fromPreview && releaseButton) {
       releaseButton.disabled = true;
-      releaseButton.textContent = "Releasing...";
+      releaseButton.textContent = "Returning...";
     }
 
     try {
@@ -560,20 +683,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!response.ok) {
         throw new Error(
-          data.detail || "Unable to release fixture."
+          data.detail || "Unable to return fixture."
         );
       }
 
-      closeFixturePreview();
+      if (fromPreview) {
+        closeFixturePreview();
+      }
 
       await loadMachineJobs();
       await refreshActiveCategory();
     } catch (error) {
       alert(error.message);
 
-      if (releaseButton) {
+      if (fromPreview && releaseButton) {
         releaseButton.disabled = false;
-        releaseButton.textContent = "Release Fixture";
+        releaseButton.textContent = "Return to Fixture Pool";
       }
     }
   }
